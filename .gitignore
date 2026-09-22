@@ -1,0 +1,33 @@
+# 临时文件和缓存
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# IDE 和编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# 项目特定
+.history/
+scripts/__pycache__/
+test_docs/
+*.log
+.zcode/
+
+# Python 虚拟环境
+venv/
+env/
+.venv/

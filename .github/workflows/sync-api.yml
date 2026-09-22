@@ -1,0 +1,83 @@
+name: Build & Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - '**/*.txt'
+      - '**/*.md'
+      - '**/*.docx'
+      - 'reader/config.json'
+      - 'scripts/**'
+      - 'reader/index.html'
+      - 'reader/css/**'
+      - 'reader/app.js'
+      - '.github/workflows/sync-api.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          pip install -q mammoth
+
+      - name: Run Sync Script
+        run: |
+          echo "[Deploy] 扫描并同步TXT/MD/DOCX文件..."
+          python scripts/sync.py
+
+      - name: Upload Reader Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: reader
+          path: reader/
+          retention-days: 1
+          compression-level: 6
+
+  deploy:
+    needs: sync
+    runs-on: ubuntu-latest
+    if: needs.sync.result == 'success'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: reader
+          path: reader
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: reader
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

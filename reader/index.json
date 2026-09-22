@@ -1,0 +1,128 @@
+[
+  {
+    "type": "folder",
+    "name": "txt",
+    "children": [
+      {
+        "type": "folder",
+        "name": "07-架构设计",
+        "children": [
+          {
+            "type": "file",
+            "name": "01-整体架构.txt",
+            "path": "07-架构设计/01-整体架构.txt",
+            "title": "01 整体架构"
+          },
+          {
+            "type": "file",
+            "name": "02-模块划分.txt",
+            "path": "07-架构设计/02-模块划分.txt",
+            "title": "02 模块划分"
+          },
+          {
+            "type": "file",
+            "name": "03-技术选型.txt",
+            "path": "07-架构设计/03-技术选型.txt",
+            "title": "03 技术选型"
+          }
+        ]
+      },
+      {
+        "type": "folder",
+        "name": "08-开发规范",
+        "children": [
+          {
+            "type": "file",
+            "name": "01-代码规范.txt",
+            "path": "08-开发规范/01-代码规范.txt",
+            "title": "01 代码规范"
+          },
+          {
+            "type": "file",
+            "name": "02-命名规范.txt",
+            "path": "08-开发规范/02-命名规范.txt",
+            "title": "02 命名规范"
+          },
+          {
+            "type": "file",
+            "name": "03-注释规范.txt",
+            "path": "08-开发规范/03-注释规范.txt",
+            "title": "03 注释规范"
+          }
+        ]
+      },
+      {
+        "type": "folder",
+        "name": "09-运维手册",
+        "children": [
+          {
+            "type": "file",
+            "name": "01-部署流程.txt",
+            "path": "09-运维手册/01-部署流程.txt",
+            "title": "01 部署流程"
+          },
+          {
+            "type": "file",
+            "name": "02-监控告警.txt",
+            "path": "09-运维手册/02-监控告警.txt",
+            "title": "02 监控告警"
+          },
+          {
+            "type": "file",
+            "name": "03-故障排查.txt",
+            "path": "09-运维手册/03-故障排查.txt",
+            "title": "03 故障排查"
+          }
+        ]
+      },
+      {
+        "type": "file",
+        "name": "01-项目简介.txt",
+        "path": "01-项目简介.txt",
+        "title": "01 项目简介"
+      },
+      {
+        "type": "file",
+        "name": "02-安装部署.txt",
+        "path": "02-安装部署.txt",
+        "title": "02 安装部署"
+      },
+      {
+        "type": "file",
+        "name": "03-配置指南.txt",
+        "path": "03-配置指南.txt",
+        "title": "03 配置指南"
+      },
+      {
+        "type": "file",
+        "name": "04-使用说明.txt",
+        "path": "04-使用说明.txt",
+        "title": "04 使用说明"
+      },
+      {
+        "type": "file",
+        "name": "05-目录结构.txt",
+        "path": "05-目录结构.txt",
+        "title": "05 目录结构"
+      },
+      {
+        "type": "file",
+        "name": "06-常见问题.txt",
+        "path": "06-常见问题.txt",
+        "title": "06 常见问题"
+      },
+      {
+        "type": "file",
+        "name": "99-测试文档.txt",
+        "path": "99-测试文档.txt",
+        "title": "99 测试文档"
+      },
+      {
+        "type": "file",
+        "name": "当代大学生对爱国主义的理解与践行.docx",
+        "path": "当代大学生对爱国主义的理解与践行.html",
+        "title": "当代大学生对爱国主义的理解与践行"
+      }
+    ]
+  }
+]
