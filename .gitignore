@@ -27,6 +27,9 @@ test_docs/
 *.log
 .zcode/
 
+# Syncthing 冲突副本（重复的垃圾文件，不发布）
+*sync-conflict-*
+
 # Python 虚拟环境
 venv/
 env/

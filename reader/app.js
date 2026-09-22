@@ -93,7 +93,7 @@
   }
 
   function loadSidebar() {
-    fetch('index.json')
+    fetch('index.json?t=' + Date.now())
       .then(r => {
         if (!r.ok) throw new Error('索引文件不存在');
         return r.json();
@@ -197,7 +197,7 @@
 
   function handleSearch(query) {
     if (!query.trim()) {
-      fetch('index.json')
+      fetch('index.json?t=' + Date.now())
         .then(r => r.json())
         .then(data => renderSidebar(data));
       return;
