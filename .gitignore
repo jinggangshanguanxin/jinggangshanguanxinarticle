@@ -25,10 +25,14 @@ Thumbs.db
 scripts/__pycache__/
 test_docs/
 *.log
-.zcode/
 
-# Syncthing 冲突副本（重复的垃圾文件，不发布）
-*sync-conflict-*
+# 构建产物：完全由 scripts/sync.py 派生，不入库
+reader/docs/
+reader/index.json
+reader/search-index.json
+
+# 工作区辅助数据（备份、项目记忆等），不参与部署
+.workbuddy/
 
 # Python 虚拟环境
 venv/

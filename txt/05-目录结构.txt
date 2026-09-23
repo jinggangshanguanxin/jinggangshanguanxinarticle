@@ -61,22 +61,27 @@ reader/
 │   ├── loadSidebar()        # 加载侧边栏
 │   ├── renderSidebarItem()  # 渲染侧边栏项
 │   ├── loadDoc()            # 加载文档
-│   ├── searchDocs()         # 搜索文档
+│   ├── handleSearch()       # 搜索文档
 │   ├── toggleTheme()        # 切换主题
 │   └── initTheme()          # 初始化主题
-├── index.json           # 文档索引
-│   [{
-│     "type": "folder",
-│     "name": "目录名",
+├── index.json           # 文档索引（自动生成）
+│   [{                              # 顶层就是源目录下的条目，按名称排序
+│     "type": "file",               # 文件节点
+│     "name": "01-项目简介.txt",
+│     "path": "01-项目简介.txt",
+│     "title": "01 项目简介"
+│   }, {
+│     "type": "folder",             # 目录节点
+│     "name": "07-架构设计",
 │     "children": [...]
 │   }, ...]
+│   注：目录与文件同级混排，不再目录优先
 ├── config.json          # 网站配置
 └── css/
     └── style.css        # 样式文件
-        ├── :root            # CSS 变量
         ├── .sidebar         # 侧边栏样式
         ├── .content         # 内容区样式
-        ├── .search-*        # 搜索框样式
+        ├── #search-input    # 搜索框样式
         ├── #back-to-top     # 返回顶部按钮
         ├── body.dark        # 暗色模式
         └── @media           # 响应式设计

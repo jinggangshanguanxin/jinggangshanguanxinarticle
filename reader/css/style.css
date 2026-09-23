@@ -60,12 +60,14 @@ body.dark * {
   top: 0;
   left: 0;
   height: 3px;
-  width: 0%;
+  width: 100%;
   background: linear-gradient(90deg, #0366d6, #58a6ff);
   z-index: 9999;
   pointer-events: none;
-  /* Use transform for GPU acceleration, avoiding reflow */
-  will-change: width;
+  /* 用 GPU 合成层做进度，避免滚动时每帧触发 layout */
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  will-change: transform;
 }
 
 body.dark .reading-progress-bar {
@@ -98,10 +100,11 @@ body.dark {
   width: 280px;
   background: #fafbfc;
   border-right: 1px solid #e1e4e8;
-  padding: 20px;
+  /* 顶部（搜索）与底部（按钮）固定，中间列表自己滚 */
+  padding: 20px 0 0;
   height: 100vh;
   position: fixed;
-  overflow-y: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -119,15 +122,25 @@ body.dark .sidebar {
 }
 
 .sidebar h3 {
+  flex: none;
+  padding: 0 20px 10px;
+  border-bottom: 1px solid #e1e4e8;
   font-size: 14px;
   color: #586069;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   text-transform: uppercase;
-  transition: color 0.3s;
+  transition: color 0.3s, border-color 0.3s;
 }
 
 body.dark .sidebar h3 {
   color: #8b949e;
+  border-color: #30363d;
+}
+
+#search-container {
+  flex: none;
+  padding: 0 20px;
+  margin-bottom: 16px;
 }
 
 #search-input {
@@ -168,7 +181,15 @@ body.dark #search-input:focus {
 
 .sidebar ul {
   list-style: none;
-  flex: 1;
+}
+
+/* 只有顶层列表滚动，目录嵌套列表不受影响 */
+#sidebar-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 20px;
+  scrollbar-gutter: stable;
 }
 
 .sidebar li {
@@ -238,15 +259,88 @@ body.dark .sidebar .folder-arrow {
   color: #8b949e;
 }
 
+/* 搜索结果：标题 + 命中片段 + 路径/命中次数 */
+.search-hit {
+  background: #fff3b0;
+  color: #24292e;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+body.dark .search-hit {
+  background: #6b4c00;
+  color: #ffe9a8;
+}
+
+.sidebar .sub-item a .search-title,
+.sidebar .sub-item a .search-meta {
+  display: block;
+}
+
+.sidebar .sub-item a .search-snippet {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #6a737d;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.sidebar .sub-item a .search-meta {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #8b949e;
+}
+
+body.dark .sidebar .sub-item a .search-snippet,
+body.dark .sidebar .sub-item a .search-meta {
+  color: #8b949e;
+}
+
+.search-path {
+  display: block;
+  word-break: break-all;
+}
+
+.search-count {
+  display: block;
+}
+
+/* 正文里的命中高亮：从搜索结果点进来时定位并标出所有命中 */
+.doc-hit {
+  background: #fff3b0;
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.doc-hit-first {
+  background: #ffd75e;
+  box-shadow: 0 0 0 2px rgba(255, 215, 94, 0.45);
+}
+
+body.dark .doc-hit {
+  background: #6b4c00;
+  color: #ffe9a8;
+}
+
+body.dark .doc-hit-first {
+  background: #8a6100;
+  box-shadow: 0 0 0 2px rgba(255, 233, 168, 0.35);
+}
+
 
 
 .sidebar-footer {
+  flex: none;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding-top: 16px;
+  padding: 12px 20px 16px;
   border-top: 1px solid #e1e4e8;
-  margin-top: 16px;
   transition: border-color 0.3s;
 }
 
@@ -309,6 +403,7 @@ body.dark .sidebar-btn:hover {
   flex-direction: column;
   gap: 4px;
   z-index: 100;
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.06);
   transition: background-color 0.3s, border-color 0.3s;
 }
 
@@ -347,25 +442,26 @@ body.dark .content {
   background: #0d1117;
 }
 
-/* 文章排版优化 */
-.content-prose,
-.docx-wrapper {
-  max-width: 720px;
-  /* 黄金可读宽度 */
-  margin: 0 auto;
-  font-size: 17px;
-  line-height: 1.8;
-  color: #333;
-}
-
-body.dark .content-prose,
-body.dark .docx-wrapper {
-  color: #adbac7;
-}
-
-.content-prose p,
-.docx-wrapper p {
-  margin-bottom: 1.5em;
+/* 正文里若原样出现页面级布局元素（示例代码漏写围栏时会发生），
+   不允许其夺取整页布局：position:fixed / 280px 宽度 / margin-left 一律失效 */
+#viewer .sidebar,
+#viewer .content,
+#viewer .sidebar-overlay,
+#viewer .mobile-menu-btn,
+#viewer #back-to-top {
+  position: static;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  transform: none;
+  overflow: visible;
+  display: block;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  z-index: auto;
 }
 
 .docx-image {
@@ -375,45 +471,6 @@ body.dark .docx-wrapper {
   margin: 20px auto;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.doc-metadata {
-  font-family: -apple-system, system-ui, sans-serif;
-  opacity: 0.8;
-}
-
-/* 目录条目：默认隐藏，可通过开关展示 */
-.toc-entry {
-  display: none;
-  /* 默认隐藏目录，减少干扰 */
-}
-
-/* 脚注样式 */
-p.footnote {
-  font-size: 0.85em;
-  color: #666;
-  padding-left: 1em;
-  border-left: 2px solid #ddd;
-  margin: 1em 0;
-}
-
-body.dark p.footnote {
-  color: #8b949e;
-  border-color: #30363d;
-}
-
-/* 题注样式 */
-p.caption {
-  font-size: 0.9em;
-  color: #666;
-  font-style: italic;
-  text-align: center;
-  margin-top: -10px;
-  margin-bottom: 20px;
-}
-
-body.dark p.caption {
-  color: #8b949e;
 }
 
 .sidebar.collapsed+.content {
@@ -544,6 +601,33 @@ body.dark .content h3 {
 
 .content h3 {
   font-size: 1.25em;
+}
+
+/* h4~h6 在 Word 文档里很常见，浏览器默认样式既小又没间距 */
+.content h4,
+.content h5,
+.content h6 {
+  margin-top: 1.6em;
+  margin-bottom: 0.8em;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.content h4 {
+  font-size: 1.1em;
+}
+
+.content h5 {
+  font-size: 1em;
+}
+
+.content h6 {
+  font-size: 0.9em;
+  color: #6a737d;
+}
+
+body.dark .content h6 {
+  color: #8b949e;
 }
 
 .content ul,
@@ -767,11 +851,6 @@ body.dark .mobile-menu-btn:hover {
   z-index: 998;
   opacity: 0;
   transition: opacity 0.3s ease;
-}
-
-.sidebar-overlay.active {
-  display: block;
-  opacity: 1;
 }
 
 @media (max-width: 768px) {

@@ -1,22 +1,22 @@
-name: Build & Deploy to GitHub Pages
+name: Sync TXT Files (API Download)
 
 on:
   push:
     branches: [main, master]
     paths:
-      - '**/*.txt'
-      - '**/*.md'
-      - '**/*.docx'
+      # 触发源：只有内容或前端资源变化才需要重建（限定 txt/，README/deploy.md 改动不触发）
+      - 'txt/**/*.txt'
+      - 'txt/**/*.md'
+      - 'txt/**/*.docx'
       - 'reader/config.json'
-      - 'scripts/**'
       - 'reader/index.html'
       - 'reader/css/**'
       - 'reader/app.js'
+      - 'scripts/**'
       - '.github/workflows/sync-api.yml'
   workflow_dispatch:
 
 permissions:
-  contents: read
   pages: write
   id-token: write
 
@@ -25,14 +25,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  sync:
+  sync-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout Repository
+      - name: Checkout Repository (Shallow - Scripts Only)
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
           persist-credentials: false
+          sparse-checkout: |
+            scripts
+            reader/css
+            reader/app.js
+            reader/index.html
+            reader/config.json
+          sparse-checkout-cone-mode: false
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -40,40 +50,24 @@ jobs:
           python-version: '3.11'
 
       - name: Install Dependencies
+        run: pip install -q mammoth
+
+      - name: Download TXT Files via API
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          pip install -q mammoth
+          echo "[Deploy] 使用 GitHub API 下载 txt/md/docx 文件..."
+          python scripts/download-files.py
 
       - name: Run Sync Script
         run: |
-          echo "[Deploy] 扫描并同步TXT/MD/DOCX文件..."
+          echo "[Deploy] 扫描并同步文档..."
           python scripts/sync.py
 
-      - name: Upload Reader Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: reader
-          path: reader/
-          retention-days: 1
-          compression-level: 6
-
-  deploy:
-    needs: sync
-    runs-on: ubuntu-latest
-    if: needs.sync.result == 'success'
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: reader
-          path: reader
-
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5
 
-      - name: Upload Artifact
+      - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: reader

@@ -6,7 +6,7 @@
   "max_content_width": 900,
   "enable_search": true,
   "enable_back_to_top": true,
-  "exclude_patterns": ["*sync-conflict*"],
-  "exclude_files": ["之三.sync-conflict-20241203-105634-BFBFMC7.docx"],
+  "exclude_patterns": [],
+  "exclude_files": [],
   "home_page": null
 }

@@ -9,9 +9,10 @@
 - 原生支持，无需编译
 - 良好的兼容性
 
-**使用场景html
-<aside class="sidebar">侧边栏</aside**：
-```>
+**使用场景**：
+
+```html
+<aside class="sidebar">侧边栏</aside>
 <main class="content">主内容区</main>
 <article>文档内容</article>
 ```
