@@ -339,8 +339,9 @@
 
   // 目录树里的文档链接（不做高亮；搜索结果用 hitLink）
   function docLink(item) {
+    const dateHtml = item.date ? '<span class="item-date">' + escapeHtml(item.date) + '</span>' : '';
     return '<a href="#' + escapeAttr(encodeURIComponent(item.path)) +
-      '" data-path="' + escapeAttr(item.path) + '">' + escapeHtml(item.title) + '</a>';
+      '" data-path="' + escapeAttr(item.path) + '">' + dateHtml + escapeHtml(item.title) + '</a>';
   }
 
   function attachFolderListeners() {

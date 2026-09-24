@@ -12,6 +12,7 @@ import os
 import re
 import json
 import shutil
+import zipfile
 from html import unescape as unescape_html
 from pathlib import Path
 from datetime import datetime
@@ -131,6 +132,48 @@ def natural_key(text):
             for t in re.split(r'(\d+)', text)]
 
 
+_docx_date_cache = {}
+
+
+def get_docx_created(path):
+    """从 docx 元数据 (docProps/core.xml) 提取文章创建时间（W3CDTF 字符串）
+
+    公众号文章转存的 docx 里该字段即文章发布时间；CI 环境文件 mtime 不可用，
+    这是唯一稳定的按时间排序依据。提取失败返回空串。
+    """
+    key = str(path)
+    if key in _docx_date_cache:
+        return _docx_date_cache[key]
+    date = ''
+    try:
+        with zipfile.ZipFile(path) as zf:
+            xml = zf.read('docProps/core.xml').decode('utf-8', errors='ignore')
+        m = re.search(r'<dcterms:created[^>]*>([^<]+)</dcterms:created>', xml)
+        if m:
+            date = m.group(1).strip()
+    except Exception:
+        date = ''
+    _docx_date_cache[key] = date
+    return date
+
+
+def article_sort_key(path):
+    """目录树排序键：子目录在前（按名称），文章按创建时间升序，无日期的排最后。
+
+    docx 用元数据里的创建时间；其余类型退回文件 mtime（仅本地构建时有意义）。
+    """
+    if path.is_dir():
+        return (0, '', natural_key(path.name))
+    if path.suffix.lower() == '.docx':
+        date = get_docx_created(path)
+    else:
+        try:
+            date = datetime.fromtimestamp(path.stat().st_mtime).strftime('%Y-%m-%dT%H:%M:%S')
+        except OSError:
+            date = ''
+    return (1 if date else 2, date, natural_key(path.name))
+
+
 def source_files(source_dir):
     """源目录下所有可处理文件；跳过 SKIP_NAMES 目录（与扫描保持一致）"""
     files = []
@@ -207,11 +250,10 @@ def convert_docx(docx_path):
 def scan_directory(directory, source_dir, patterns, exclude_files):
     """递归扫描生成目录树（folder/file）
 
-    排序：只按名称（数字段按数值），目录与文件同级混排。
-    刻意不做「目录优先」—— 文件名里的序号前缀已经表达了顺序。
+    排序：子目录在前，文章按创建时间升序（见 article_sort_key）。
     """
     items = []
-    for path in sorted(directory.iterdir(), key=lambda p: natural_key(p.name)):
+    for path in sorted(directory.iterdir(), key=article_sort_key):
         if any(path.name.startswith(s) for s in SKIP_NAMES):
             continue
 
@@ -227,12 +269,17 @@ def scan_directory(directory, source_dir, patterns, exclude_files):
                 log_info(f'排除: {rel_path}', 'Sync-Scan')
             continue
 
-        items.append({
+        entry = {
             'type': 'file',
             'name': path.name,
             'path': output_rel_path(rel_path).as_posix(),
             'title': file_title(path),
-        })
+        }
+        if path.suffix.lower() == '.docx':
+            created = get_docx_created(path)
+            if created:
+                entry['date'] = created[:10]
+        items.append(entry)
     return items
 
 

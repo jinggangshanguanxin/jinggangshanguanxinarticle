@@ -259,6 +259,25 @@ body.dark .sidebar .folder-arrow {
   color: #8b949e;
 }
 
+/* 文章日期徽章：构建期从 docx 元数据提取的发布时间 */
+.sidebar .sub-item a .item-date {
+  display: inline-block;
+  font-size: 11px;
+  color: #586069;
+  background: #f1f8ff;
+  border-radius: 3px;
+  padding: 0 5px;
+  margin-right: 6px;
+  vertical-align: 1px;
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+
+body.dark .sidebar .sub-item a .item-date {
+  color: #8b949e;
+  background: #161b22;
+}
+
 /* 搜索结果：标题 + 命中片段 + 路径/命中次数 */
 .search-hit {
   background: #fff3b0;
