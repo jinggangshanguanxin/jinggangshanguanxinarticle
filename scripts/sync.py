@@ -158,12 +158,12 @@ def get_docx_created(path):
 
 
 def article_sort_key(path):
-    """目录树排序键：子目录在前（按名称），文章按创建时间升序，无日期的排最后。
+    """目录树排序键：文章按创建时间倒序（新的在前），无日期的排最后，子目录最后。
 
     docx 用元数据里的创建时间；其余类型退回文件 mtime（仅本地构建时有意义）。
     """
     if path.is_dir():
-        return (0, '', natural_key(path.name))
+        return (2, (), natural_key(path.name))
     if path.suffix.lower() == '.docx':
         date = get_docx_created(path)
     else:
@@ -171,7 +171,10 @@ def article_sort_key(path):
             date = datetime.fromtimestamp(path.stat().st_mtime).strftime('%Y-%m-%dT%H:%M:%S')
         except OSError:
             date = ''
-    return (1 if date else 2, date, natural_key(path.name))
+    if not date:
+        return (1, (9999,), natural_key(path.name))
+    neg = tuple(-int(x) for x in re.findall(r'\d+', date[:10]))
+    return (1, neg, natural_key(path.name))
 
 
 def source_files(source_dir):
@@ -250,7 +253,7 @@ def convert_docx(docx_path):
 def scan_directory(directory, source_dir, patterns, exclude_files):
     """递归扫描生成目录树（folder/file）
 
-    排序：子目录在前，文章按创建时间升序（见 article_sort_key）。
+    排序：文章按创建时间倒序（新的在前），无日期靠后，子目录最后（见 article_sort_key）。
     """
     items = []
     for path in sorted(directory.iterdir(), key=article_sort_key):

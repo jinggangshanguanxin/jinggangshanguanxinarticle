@@ -927,3 +927,27 @@ body.dark .mobile-menu-btn:hover {
     opacity: 1;
   }
 }
+/* 页脚：GitHub 仓库链接 */
+.site-footer {
+  text-align: center;
+  padding: 18px 16px 26px;
+  font-size: 12px;
+}
+
+.site-footer a {
+  color: #586069;
+  text-decoration: none;
+}
+
+.site-footer a:hover {
+  color: #0366d6;
+  text-decoration: underline;
+}
+
+body.dark .site-footer a {
+  color: #8b949e;
+}
+
+body.dark .site-footer a:hover {
+  color: #58a6ff;
+}
