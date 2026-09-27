@@ -245,7 +245,9 @@ def make_image_handler(img_dir, src_prefix):
     页面相对 URL 前缀（HTML 由前端 fetch 注入，src 相对站点根而非 HTML 位置）。
     """
     def handle_image(image):
-        data = image.read()
+        # Python 版 mammoth 的图片对象用 open() 取字节流（不是 JS 版的 read()）
+        with image.open() as fh:
+            data = fh.read()
         digest = hashlib.md5(data).hexdigest()[:12]
         ext = IMG_EXT.get((image.content_type or '').lower(), '.bin')
         name = digest + ext
