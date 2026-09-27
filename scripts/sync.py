@@ -12,6 +12,7 @@ import os
 import re
 import json
 import shutil
+import base64
 import hashlib
 import zipfile
 from html import unescape as unescape_html
@@ -229,32 +230,36 @@ DOCX_STYLE_MAP = '\n'.join([
 ])
 
 
-# DOCX 内嵌图片的字节扩展名（按 mammoth 报告的 content-type）
+# DOCX 内嵌图片的字节扩展名（按 data URI 的 content-type）
 IMG_EXT = {
     'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif',
     'image/webp': '.webp', 'image/bmp': '.bmp', 'image/svg+xml': '.svg',
     'image/tiff': '.tiff', 'image/x-emf': '.emf', 'image/x-wmf': '.wmf',
 }
 
+# mammoth 默认把图片内嵌为 base64 data URI
+DATA_URI_RE = re.compile(r'src="data:(image/[a-zA-Z0-9.+-]+);base64,([^"]+)"')
 
-def make_image_handler(img_dir, src_prefix):
-    """mammoth convert_image 处理器：图片落盘为独立文件，HTML 里引用相对路径
 
-    不再内嵌 base64 data URI —— 否则单篇文章 HTML 可达十几 MB。
-    文件名用内容 md5，同图自然去重；img_dir 为磁盘目录，src_prefix 为
-    页面相对 URL 前缀（HTML 由前端 fetch 注入，src 相对站点根而非 HTML 位置）。
+def externalize_images(html, img_dir, src_prefix):
+    """把 HTML 里的 base64 图片落盘为独立文件，src 改为页面相对路径
+
+    不用 mammoth 的 convert_image 回调（其行为随版本不稳），转换后统一后处理。
+    文件名用内容 md5，同图自然去重；img_dir 为磁盘目录，src_prefix 为页面
+    相对 URL 前缀（HTML 由前端 fetch 注入，src 相对站点根而非 HTML 位置）。
     """
-    def handle_image(image):
-        # Python 版 mammoth 的图片对象用 open() 取字节流（不是 JS 版的 read()）
-        with image.open() as fh:
-            data = fh.read()
-        digest = hashlib.md5(data).hexdigest()[:12]
-        ext = IMG_EXT.get((image.content_type or '').lower(), '.bin')
-        name = digest + ext
-        img_dir.mkdir(parents=True, exist_ok=True)
+    img_dir.mkdir(parents=True, exist_ok=True)
+
+    def repl(m):
+        try:
+            data = base64.b64decode(m.group(2))
+        except Exception:
+            return m.group(0)
+        name = hashlib.md5(data).hexdigest()[:12] + IMG_EXT.get(m.group(1).lower(), '.bin')
         (img_dir / name).write_bytes(data)
-        return {'src': f'{src_prefix}/{name}'}
-    return handle_image
+        return f'src="{src_prefix}/{name}"'
+
+    return DATA_URI_RE.sub(repl, html)
 
 
 def convert_docx(docx_path, img_dir=None, src_prefix=None):
@@ -265,12 +270,9 @@ def convert_docx(docx_path, img_dir=None, src_prefix=None):
     mammoth = _mammoth_module()
     if mammoth is False:
         raise ImportError('请安装 mammoth 库: pip install mammoth')
-    kwargs = {'style_map': DOCX_STYLE_MAP}
-    if img_dir is not None and src_prefix:
-        kwargs['convert_image'] = make_image_handler(img_dir, src_prefix)
     try:
         with open(docx_path, 'rb') as f:
-            result = mammoth.convert_to_html(f, **kwargs)
+            result = mammoth.convert_to_html(f, style_map=DOCX_STYLE_MAP)
     except Exception as e:
         log_error(f'Word 文档转换失败: {docx_path} - {e}', 'Sync-DOCX')
         raise
@@ -280,7 +282,10 @@ def convert_docx(docx_path, img_dir=None, src_prefix=None):
     if len(result.messages) > LINT_LIMIT:
         log_warn(f'{docx_path.name} 另有 {len(result.messages) - LINT_LIMIT} 条提示未列出', 'Sync-DOCX')
 
-    return result.value.replace('<table>', '<table class="docx-table">').replace('<img', '<img loading="lazy" class="docx-image"')
+    html = result.value.replace('<table>', '<table class="docx-table">').replace('<img', '<img loading="lazy" class="docx-image"')
+    if img_dir is not None and src_prefix:
+        html = externalize_images(html, img_dir, src_prefix)
+    return html
 
 
 # --------------------------------------------------------------------- 扫描
