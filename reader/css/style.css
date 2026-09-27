@@ -927,11 +927,17 @@ body.dark .mobile-menu-btn:hover {
     opacity: 1;
   }
 }
-/* 页脚：GitHub 仓库链接 */
+/* 页脚：GitHub 仓库链接（位于 main 内容流内，非 body flex 子项） */
 .site-footer {
   text-align: center;
-  padding: 18px 16px 26px;
+  margin-top: 48px;
+  padding-top: 18px;
+  border-top: 1px solid #e1e4e8;
   font-size: 12px;
+}
+
+body.dark .site-footer {
+  border-top-color: #21262d;
 }
 
 .site-footer a {
