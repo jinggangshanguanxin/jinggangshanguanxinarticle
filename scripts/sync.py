@@ -12,6 +12,7 @@ import os
 import re
 import json
 import shutil
+import hashlib
 import zipfile
 from html import unescape as unescape_html
 from pathlib import Path
@@ -228,14 +229,46 @@ DOCX_STYLE_MAP = '\n'.join([
 ])
 
 
-def convert_docx(docx_path):
-    """DOCX -> HTML（mammoth），补样式类并追加 mammoth 的提示"""
+# DOCX 内嵌图片的字节扩展名（按 mammoth 报告的 content-type）
+IMG_EXT = {
+    'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif',
+    'image/webp': '.webp', 'image/bmp': '.bmp', 'image/svg+xml': '.svg',
+    'image/tiff': '.tiff', 'image/x-emf': '.emf', 'image/x-wmf': '.wmf',
+}
+
+
+def make_image_handler(img_dir, src_prefix):
+    """mammoth convert_image 处理器：图片落盘为独立文件，HTML 里引用相对路径
+
+    不再内嵌 base64 data URI —— 否则单篇文章 HTML 可达十几 MB。
+    文件名用内容 md5，同图自然去重；img_dir 为磁盘目录，src_prefix 为
+    页面相对 URL 前缀（HTML 由前端 fetch 注入，src 相对站点根而非 HTML 位置）。
+    """
+    def handle_image(image):
+        data = image.read()
+        digest = hashlib.md5(data).hexdigest()[:12]
+        ext = IMG_EXT.get((image.content_type or '').lower(), '.bin')
+        name = digest + ext
+        img_dir.mkdir(parents=True, exist_ok=True)
+        (img_dir / name).write_bytes(data)
+        return {'src': f'{src_prefix}/{name}'}
+    return handle_image
+
+
+def convert_docx(docx_path, img_dir=None, src_prefix=None):
+    """DOCX -> HTML（mammoth），补样式类并追加 mammoth 的提示
+
+    img_dir/src_prefix 同时给出时，内嵌图片外置为独立文件并懒加载。
+    """
     mammoth = _mammoth_module()
     if mammoth is False:
         raise ImportError('请安装 mammoth 库: pip install mammoth')
+    kwargs = {'style_map': DOCX_STYLE_MAP}
+    if img_dir is not None and src_prefix:
+        kwargs['convert_image'] = make_image_handler(img_dir, src_prefix)
     try:
         with open(docx_path, 'rb') as f:
-            result = mammoth.convert_to_html(f, style_map=DOCX_STYLE_MAP)
+            result = mammoth.convert_to_html(f, **kwargs)
     except Exception as e:
         log_error(f'Word 文档转换失败: {docx_path} - {e}', 'Sync-DOCX')
         raise
@@ -245,7 +278,7 @@ def convert_docx(docx_path):
     if len(result.messages) > LINT_LIMIT:
         log_warn(f'{docx_path.name} 另有 {len(result.messages) - LINT_LIMIT} 条提示未列出', 'Sync-DOCX')
 
-    return result.value.replace('<table>', '<table class="docx-table">').replace('<img', '<img class="docx-image"')
+    return result.value.replace('<table>', '<table class="docx-table">').replace('<img', '<img loading="lazy" class="docx-image"')
 
 
 # --------------------------------------------------------------------- 扫描
@@ -307,7 +340,9 @@ def sync_files(source_dir, dest_dir, patterns, exclude_files):
 
         try:
             if rel_path.suffix.lower() in CONVERT_EXTENSIONS:
-                dest_path.write_text(convert_docx(path), encoding='utf-8')
+                stem = dest_path.with_suffix('').relative_to(dest_dir).as_posix()
+                html = convert_docx(path, dest_dir / 'img' / stem, 'docs/img/' + stem)
+                dest_path.write_text(html, encoding='utf-8')
                 action = '转换'
             else:
                 shutil.copy2(path, dest_path)
@@ -334,10 +369,28 @@ def cleanup_orphaned_files(source_dir, dest_dir, patterns, exclude_files):
         if not should_exclude(path, source_dir, patterns, exclude_files)
     }
 
+    # 图片目录的合法集合：img/<文章相对路径去扩展名>/
+    expected_img_dirs = {
+        'img/' + output_rel_path(path.relative_to(source_dir)).with_suffix('').as_posix()
+        for path in source_files(source_dir)
+        if not should_exclude(path, source_dir, patterns, exclude_files)
+        and path.suffix.lower() in CONVERT_EXTENSIONS
+    }
+
     deleted = 0
     for path in dest_dir.rglob('*'):
         rel_str = path.relative_to(dest_dir).as_posix()
-        if not path.is_file() or path.suffix.lower() not in OUTPUT_EXTENSIONS:
+        if not path.is_file():
+            continue
+        if path.suffix.lower() not in OUTPUT_EXTENSIONS:
+            # docs/img/ 下的图片：只保留仍存在对应文章的目录
+            if rel_str.startswith('img/') and rel_str.rsplit('/', 1)[0] not in expected_img_dirs:
+                try:
+                    path.unlink()
+                    log_info(f'删除: {rel_str}', 'Sync-Cleanup')
+                    deleted += 1
+                except OSError as e:
+                    log_error(f'删除文件失败: {rel_str} - {e}', 'Sync-Cleanup')
             continue
         if rel_str in expected:
             continue

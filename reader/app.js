@@ -860,6 +860,6 @@
   // 配置与索引是两个独立请求，并行发出，去掉串行等待
   Promise.all([loadConfig(), loadIndex()]).then(handleHash);
 
-  // 全文索引体积不大，启动后后台加载，让首次搜索就能拿到命中片段
-  loadSearchIndex().catch((err) => log('[Search] 全文索引加载失败:', err.message));
+  // 全文索引（数 MB）不再启动急加载：搜索提交路径已兜底（先快速命中，
+  // 索引按需拉取后刷新结果），避免与首篇文章请求抢带宽
 })();
